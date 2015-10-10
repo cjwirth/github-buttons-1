@@ -1,10 +1,9 @@
 
 var fs = require('fs');
+var path = require('path');
 var execFile = require('child_process').execFile;
 
 var express = require('express');
-var phantom = require('phantom');
-var gm = require('gm');
 var marked = require('marked');
 
 var app = express();
@@ -36,14 +35,26 @@ app.get('/stars/:user([a-z0-9-_]+)/:repo([a-z0-9-_]+)', function(req, res){
         repo = req.params.repo;
 
     var url = "http://ghbtns.com/github-btn.html?user=" + user + "&repo=" + repo + "&type=watch&count=true";
-    var output = "./buttons/" + user + "-" + repo + ".png";
+    var filename = user + "-" + repo + ".png";
+    var output = path.join(__dirname, filename);
 
-    var phantomjs = phantomDir+'/bin/phantomjs';
+    if (fs.existsSync(output)) {
+        var stat = fs.statSync(output);
+        var now = new Date().getTime();
+
+        if (now < stat.mtime.getTime() + expire) {
+            res.sendfile(output);
+            return
+        }
+    }
+
+    var phantomjs = path.join(phantomDir, "bin", "phantomjs");
     var args = [
-        './rasterize.js',
+        path.join(__dirname,'rasterize.js'),
         url,
         output
     ];
+
     execFile(phantomjs, args, {}, function(error, stdout, stderr) {
         console.log('Finished Running For URL: ' + url);
         if (error) {
@@ -57,50 +68,12 @@ app.get('/stars/:user([a-z0-9-_]+)/:repo([a-z0-9-_]+)', function(req, res){
         }
 
         if (error) {
-//            console.log('Error loading: ' + error);
             res.send(500, "Failed to generate the button");
         } else {
             res.sendfile(output);
         }
-
     });
 });
-
-// app.get('/stars/:user([a-z0-9-_]+)/:repo([a-z0-9-_]+)', function(req, res){
-
-//     var user = req.params.user,
-//         repo = req.params.repo;
-
-//     var url = "http://ghbtns.com/github-btn.html?user=" + user + "&repo=" + repo + "&type=watch&count=true";
-//     var output = "buttons/" + user + "-" + repo + ".png";
-
-//     if (fs.existsSync(output)) {
-//         var stat = fs.statSync(output);
-//         var now = new Date().getTime();
-
-//         if (now < stat.mtime.getTime() + expire) {
-//             return res.sendfile(output);
-//         }
-//     }
-
-//     phantom.create(phantomOptions, function(ph) {
-//         ph.createPage(function(page) {
-//             page.viewportSize = { width: 150, height: 20 };
-//             page.open(url, function(status) {
-//                 page.render(output, function () {
-//                     gm(output).trim().write(output, function (err) {
-//                         if (!err) {
-//                             res.sendfile(output);
-//                         } else {
-//                             res.send(500, "Failed to generate the button");
-//                         }
-//                         ph.exit();
-//                     });
-//                 });
-//             });
-//         });
-//     });
-// });
  
 console.log("Trying on ip: " + ip + ":" + port);
 var server = app.listen(port, ip, function() {
