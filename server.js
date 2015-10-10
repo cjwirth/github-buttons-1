@@ -1,10 +1,15 @@
-//var page = require('webpage').create();
+
+var fs = require('fs');
+var execFile = require('child_process').execFile;
+
+var express = require('express');
 var phantom = require('phantom');
 var gm = require('gm');
-var express = require('express');
-var app = express();
-var fs = require('fs');
 var marked = require('marked');
+
+var app = express();
+var home = process.env.HOME;
+var phantomDir = home + '/app-root/data/phantomjs';
 
 // expiration of button cache
 var expire = 3600000; // 1 hour
@@ -31,35 +36,71 @@ app.get('/stars/:user([a-z0-9-_]+)/:repo([a-z0-9-_]+)', function(req, res){
         repo = req.params.repo;
 
     var url = "http://ghbtns.com/github-btn.html?user=" + user + "&repo=" + repo + "&type=watch&count=true";
-    var output = "buttons/" + user + "-" + repo + ".png";
+    var output = "./buttons/" + user + "-" + repo + ".png";
 
-    if (fs.existsSync(output)) {
-        var stat = fs.statSync(output);
-        var now = new Date().getTime();
-
-        if (now < stat.mtime.getTime() + expire) {
-            return res.sendfile(output);
+    var phantomjs = phantomDir+'/bin/phantomjs';
+    var args = [
+        './rasterize.js',
+        url,
+        output
+    ];
+    execFile(phantomjs, args, {}, function(error, stdout, stderr) {
+        console.log('Finished Running For URL: ' + url);
+        if (error) {
+            console.log('Error loading: ' + error);
         }
-    }
+        if (stdout) {
+            console.log("STDOUT: "+stdout);
+        }
+        if (stderr) {
+            console.log("STDERR: "+stderr);
+        }
 
-    phantom.create(phantomOptions, function(ph) {
-        ph.createPage(function(page) {
-            page.viewportSize = { width: 150, height: 20 };
-            page.open(url, function(status) {
-                page.render(output, function () {
-                    gm(output).trim().write(output, function (err) {
-                        if (!err) {
-                            res.sendfile(output);
-                        } else {
-                            res.send(500, "Failed to generate the button");
-                        }
-                        ph.exit();
-                    });
-                });
-            });
-        });
+        if (error) {
+//            console.log('Error loading: ' + error);
+            res.send(500, "Failed to generate the button");
+        } else {
+            res.sendfile(output);
+        }
+
     });
 });
+
+// app.get('/stars/:user([a-z0-9-_]+)/:repo([a-z0-9-_]+)', function(req, res){
+
+//     var user = req.params.user,
+//         repo = req.params.repo;
+
+//     var url = "http://ghbtns.com/github-btn.html?user=" + user + "&repo=" + repo + "&type=watch&count=true";
+//     var output = "buttons/" + user + "-" + repo + ".png";
+
+//     if (fs.existsSync(output)) {
+//         var stat = fs.statSync(output);
+//         var now = new Date().getTime();
+
+//         if (now < stat.mtime.getTime() + expire) {
+//             return res.sendfile(output);
+//         }
+//     }
+
+//     phantom.create(phantomOptions, function(ph) {
+//         ph.createPage(function(page) {
+//             page.viewportSize = { width: 150, height: 20 };
+//             page.open(url, function(status) {
+//                 page.render(output, function () {
+//                     gm(output).trim().write(output, function (err) {
+//                         if (!err) {
+//                             res.sendfile(output);
+//                         } else {
+//                             res.send(500, "Failed to generate the button");
+//                         }
+//                         ph.exit();
+//                     });
+//                 });
+//             });
+//         });
+//     });
+// });
  
 console.log("Trying on ip: " + ip + ":" + port);
 var server = app.listen(port, ip, function() {
