@@ -52,6 +52,8 @@ app.get('/stars/:user([a-z0-9-_]+)/:repo([a-z0-9-_]+)', function(req, res){
     });
 });
 
-var server = app.listen(3000, function() {
+var port = process.env.OPENSHIFT_NODEJS_PORT || 8080
+var server = app.listen(port, function() {
     console.log('Listening on port %d', server.address().port);
 });
+
