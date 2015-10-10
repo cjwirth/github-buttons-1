@@ -8,6 +8,15 @@ var marked = require('marked');
 
 // expiration of button cache
 var expire = 3600000; // 1 hour
+var ip = process.env.OPENSHIFT_NODEJS_IP || "localhost";
+var port = process.env.OPENSHIFT_NODEJS_PORT || 8080;
+
+// With Openshift, I have restrictions...
+var phantomOptions = {
+    port: 15000,
+    hostname: ip,
+    path: "~/app-root/data/phantomjs/bin/"
+};
 
 app.get('/', function (req, res) {
     fs.readFile('README.md', 'utf8', function(err, data){
@@ -33,7 +42,7 @@ app.get('/stars/:user([a-z0-9-_]+)/:repo([a-z0-9-_]+)', function(req, res){
         }
     }
 
-    phantom.create(function(ph) {
+    phantom.create(phantomOptions, function(ph) {
         ph.createPage(function(page) {
             page.viewportSize = { width: 150, height: 20 };
             page.open(url, function(status) {
@@ -51,9 +60,9 @@ app.get('/stars/:user([a-z0-9-_]+)/:repo([a-z0-9-_]+)', function(req, res){
         });
     });
 });
-
-var port = process.env.OPENSHIFT_NODEJS_PORT || 8080
-var server = app.listen(port, function() {
+ 
+console.log("Trying on ip: " + ip + ":" + port);
+var server = app.listen(port, ip, function() {
     console.log('Listening on port %d', server.address().port);
 });
 
