@@ -29,7 +29,7 @@ app.get('/', function (req, res) {
     });
 });
 
-app.get('/stars/:user([a-z0-9-_]+)/:repo([a-z0-9-_]+)', function(req, res){
+app.get('/stars/:user([a-z0-9-_\.]+)/:repo([a-z0-9-_\.]+)', function(req, res){
 
     var user = req.params.user,
         repo = req.params.repo;
